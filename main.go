@@ -66,8 +66,8 @@ func Load() []Set {
 	return sets
 }
 
-// Markov is a markov model
-type Markov [2]byte
+// Markov2 is a markov model
+type Markov2 [2]byte
 
 // Markov is a 3rd order markov model
 type Markov3 [3]byte
@@ -123,11 +123,11 @@ func NewHistogramSet() HistogramSet {
 
 // Mixer mixes several histograms together
 type Mixer struct {
-	Markov  Markov
+	Markov2 Markov2
 	Markov3 Markov3
 	Set     HistogramSet
 	Set1    [256]HistogramSet
-	Set2    map[Markov]*HistogramSet
+	Set2    map[Markov2]*HistogramSet
 	Set3    map[Markov3]*HistogramSet
 }
 
@@ -139,7 +139,7 @@ func NewMixer() Mixer {
 	for i := range m.Set1 {
 		m.Set1[i] = NewHistogramSet()
 	}
-	m.Set2 = make(map[Markov]*HistogramSet)
+	m.Set2 = make(map[Markov2]*HistogramSet)
 	m.Set3 = make(map[Markov3]*HistogramSet)
 	return m
 }
@@ -157,21 +157,21 @@ func (m *Mixer) Mix() [256]float64 {
 			x.Data = append(x.Data, float64(v)/sum)
 		}
 	}
-	for i := range m.Set1[m.Markov[0]].Histograms {
+	for i := range m.Set1[m.Markov2[0]].Histograms {
 		sum := 0.0
-		for _, v := range m.Set1[m.Markov[0]].Histograms[i].Vector {
+		for _, v := range m.Set1[m.Markov2[0]].Histograms[i].Vector {
 			sum += float64(v)
 		}
-		for _, v := range m.Set1[m.Markov[0]].Histograms[i].Vector {
+		for _, v := range m.Set1[m.Markov2[0]].Histograms[i].Vector {
 			x.Data = append(x.Data, float64(v)/sum)
 		}
 	}
-	for i := range m.Set2[m.Markov].Histograms {
+	for i := range m.Set2[m.Markov2].Histograms {
 		sum := 0.0
-		for _, v := range m.Set2[m.Markov].Histograms[i].Vector {
+		for _, v := range m.Set2[m.Markov2].Histograms[i].Vector {
 			sum += float64(v)
 		}
-		for _, v := range m.Set2[m.Markov].Histograms[i].Vector {
+		for _, v := range m.Set2[m.Markov2].Histograms[i].Vector {
 			x.Data = append(x.Data, float64(v)/sum)
 		}
 	}
@@ -201,20 +201,20 @@ func (m *Mixer) Add(s byte) {
 	for i := range m.Set.Histograms {
 		m.Set.Histograms[i].Add(s)
 	}
-	m.Markov[1] = m.Markov[0]
-	m.Markov[0] = s
+	m.Markov2[1] = m.Markov2[0]
+	m.Markov2[0] = s
 	m.Markov3[2] = m.Markov3[1]
 	m.Markov3[1] = m.Markov3[0]
 	m.Markov3[0] = s
-	for i := range m.Set1[m.Markov[0]].Histograms {
-		m.Set1[m.Markov[0]].Histograms[i].Add(s)
+	for i := range m.Set1[m.Markov2[0]].Histograms {
+		m.Set1[m.Markov2[0]].Histograms[i].Add(s)
 	}
-	if m.Set2[m.Markov] == nil {
+	if m.Set2[m.Markov2] == nil {
 		set := NewHistogramSet()
-		m.Set2[m.Markov] = &set
+		m.Set2[m.Markov2] = &set
 	}
-	for i := range m.Set2[m.Markov].Histograms {
-		m.Set2[m.Markov].Histograms[i].Add(s)
+	for i := range m.Set2[m.Markov2].Histograms {
+		m.Set2[m.Markov2].Histograms[i].Add(s)
 	}
 	if m.Set3[m.Markov3] == nil {
 		set := NewHistogramSet()
