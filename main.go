@@ -229,11 +229,6 @@ func main() {
 		encoding = append(encoding, 10)
 	}
 	encoding = append(encoding, 11)
-	for j := range set.Test[0].Output {
-		encoding = append(encoding, set.Test[0].Output[j]...)
-		encoding = append(encoding, 10)
-	}
-	encoding = append(encoding, 11)
 	m.Add(0)
 	txts := make([]TXT, 0, 8)
 	for i := range encoding {
@@ -260,6 +255,11 @@ func main() {
 			break
 		}
 	}
+	for j := range set.Test[0].Output {
+		fmt.Println(set.Test[0].Output[j])
+	}
+	fmt.Println()
+	encoding = append(encoding, 11)
 	for i := range solution {
 		if solution[i] == 10 {
 			fmt.Println()
