@@ -14,6 +14,14 @@ import (
 const (
 	// Size is the number of histograms
 	Size = 11
+	// EndLine is the end of the line
+	EndLine = 10
+	// EndBlock is the endof a block of lines
+	EndBlock = 11
+	// BeginPuzzle is the beginning of a puzzle
+	BeginPuzzle = 12
+	// BeginSolution is the beginning of a solution
+	BeginSolution = 13
 )
 
 // Example is a learning example
@@ -213,22 +221,26 @@ func main() {
 	set := s[0]
 	encoding := make([]byte, 0, 8)
 	for i := range set.Train {
+		//encoding = append(encoding, BeginPuzzle)
 		for j := range set.Train[i].Input {
 			encoding = append(encoding, set.Train[i].Input[j]...)
-			encoding = append(encoding, 10)
+			encoding = append(encoding, EndLine)
 		}
-		encoding = append(encoding, 11)
+		encoding = append(encoding, EndBlock)
+		//encoding = append(encoding, BeginSolution)
 		for j := range set.Train[i].Output {
 			encoding = append(encoding, set.Train[i].Output[j]...)
-			encoding = append(encoding, 10)
+			encoding = append(encoding, EndLine)
 		}
-		encoding = append(encoding, 11)
+		encoding = append(encoding, EndBlock)
 	}
+	//encoding = append(encoding, BeginPuzzle)
 	for j := range set.Test[0].Input {
 		encoding = append(encoding, set.Test[0].Input[j]...)
-		encoding = append(encoding, 10)
+		encoding = append(encoding, EndLine)
 	}
-	encoding = append(encoding, 11)
+	encoding = append(encoding, EndBlock)
+	//encoding = append(encoding, BeginSolution)
 	m.Add(0)
 	txts := make([]TXT, 0, 8)
 	for i := range encoding {
