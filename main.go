@@ -179,6 +179,10 @@ func (m *Mixer) Add(s byte) {
 	for i := range m.Set1[m.Markov[0]].Histograms {
 		m.Set1[m.Markov[0]].Histograms[i].Add(s)
 	}
+	if m.Set2[m.Markov] == nil {
+		set := NewHistogramSet()
+		m.Set2[m.Markov] = &set
+	}
 	for i := range m.Set2[m.Markov].Histograms {
 		m.Set2[m.Markov].Histograms[i].Add(s)
 	}
