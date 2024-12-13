@@ -268,10 +268,9 @@ func main() {
 	}
 	encoding = append(encoding, EndBlock)
 	//encoding = append(encoding, BeginSolution)
-	m.Add(0)
 	txts := make([]TXT, 0, 8)
-	for i := range encoding {
-		if i < len(encoding)-1 {
+	for i := range encoding[:len(encoding)-1] {
+		if i > 0 {
 			txts = append(txts, TXT{
 				Vector: m.Mix(),
 				Symbol: encoding[i+1],
@@ -279,6 +278,7 @@ func main() {
 		}
 		m.Add(encoding[i])
 	}
+	m.Add(encoding[len(encoding)-1])
 	solution := make([]byte, 0, 8)
 	for {
 		vector, max, symbol := m.Mix(), -1.0, byte(0)
