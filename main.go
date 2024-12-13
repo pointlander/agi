@@ -14,6 +14,8 @@ import (
 const (
 	// Size is the number of histograms
 	Size = 11
+	// Rows is the number of rows the matrix has
+	Rows = 4 * Size
 	// EndLine is the end of the line
 	EndLine = 10
 	// EndBlock is the endof a block of lines
@@ -67,6 +69,9 @@ func Load() []Set {
 // Markov is a markov model
 type Markov [2]byte
 
+// Markov is a 3rd order markov model
+type Markov3 [3]byte
+
 // Histogram is a buffered histogram
 type Histogram struct {
 	Vector [256]uint16
@@ -118,10 +123,12 @@ func NewHistogramSet() HistogramSet {
 
 // Mixer mixes several histograms together
 type Mixer struct {
-	Markov Markov
-	Set    HistogramSet
-	Set1   [256]HistogramSet
-	Set2   map[Markov]*HistogramSet
+	Markov  Markov
+	Markov3 Markov3
+	Set     HistogramSet
+	Set1    [256]HistogramSet
+	Set2    map[Markov]*HistogramSet
+	Set3    map[Markov3]*HistogramSet
 }
 
 // NewMixer makes a new mixer
@@ -133,13 +140,14 @@ func NewMixer() Mixer {
 		m.Set1[i] = NewHistogramSet()
 	}
 	m.Set2 = make(map[Markov]*HistogramSet)
+	m.Set3 = make(map[Markov3]*HistogramSet)
 	return m
 }
 
 // MixFloat64 mixes the histograms outputting float64
 func (m *Mixer) Mix() [256]float64 {
 	mix := [256]float64{}
-	x := NewMatrix(256, 3*Size)
+	x := NewMatrix(256, Rows)
 	for i := range m.Set.Histograms {
 		sum := 0.0
 		for _, v := range m.Set.Histograms[i].Vector {
@@ -164,6 +172,15 @@ func (m *Mixer) Mix() [256]float64 {
 			sum += float64(v)
 		}
 		for _, v := range m.Set2[m.Markov].Histograms[i].Vector {
+			x.Data = append(x.Data, float64(v)/sum)
+		}
+	}
+	for i := range m.Set3[m.Markov3].Histograms {
+		sum := 0.0
+		for _, v := range m.Set3[m.Markov3].Histograms[i].Vector {
+			sum += float64(v)
+		}
+		for _, v := range m.Set3[m.Markov3].Histograms[i].Vector {
 			x.Data = append(x.Data, float64(v)/sum)
 		}
 	}
@@ -186,6 +203,9 @@ func (m *Mixer) Add(s byte) {
 	}
 	m.Markov[1] = m.Markov[0]
 	m.Markov[0] = s
+	m.Markov3[2] = m.Markov3[1]
+	m.Markov3[1] = m.Markov3[0]
+	m.Markov3[0] = s
 	for i := range m.Set1[m.Markov[0]].Histograms {
 		m.Set1[m.Markov[0]].Histograms[i].Add(s)
 	}
@@ -195,6 +215,13 @@ func (m *Mixer) Add(s byte) {
 	}
 	for i := range m.Set2[m.Markov].Histograms {
 		m.Set2[m.Markov].Histograms[i].Add(s)
+	}
+	if m.Set3[m.Markov3] == nil {
+		set := NewHistogramSet()
+		m.Set3[m.Markov3] = &set
+	}
+	for i := range m.Set3[m.Markov3].Histograms {
+		m.Set3[m.Markov3].Histograms[i].Add(s)
 	}
 }
 
