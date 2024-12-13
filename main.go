@@ -7,12 +7,13 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"math"
 	"os"
 )
 
 const (
 	// Size is the number of histograms
-	Size = 8
+	Size = 11
 )
 
 // Example is a learning example
@@ -60,8 +61,8 @@ type Markov [2]byte
 
 // Histogram is a buffered histogram
 type Histogram struct {
-	Vector [256]byte
-	Buffer [128]byte
+	Vector [256]uint16
+	Buffer [1024]byte
 	Index  int
 	Size   int
 }
@@ -85,65 +86,80 @@ func (h *Histogram) Add(s byte) {
 	h.Index = index
 }
 
+// HistogramSet is a histogram set
+type HistogramSet struct {
+	Histograms [Size]Histogram
+}
+
+// NewHistogramSet makes a new histogram set
+func NewHistogramSet() HistogramSet {
+	h := HistogramSet{}
+	h.Histograms[0] = NewHistogram(1)
+	h.Histograms[1] = NewHistogram(2)
+	h.Histograms[2] = NewHistogram(4)
+	h.Histograms[3] = NewHistogram(8)
+	h.Histograms[4] = NewHistogram(16)
+	h.Histograms[5] = NewHistogram(32)
+	h.Histograms[6] = NewHistogram(64)
+	h.Histograms[7] = NewHistogram(128)
+	h.Histograms[8] = NewHistogram(256)
+	h.Histograms[9] = NewHistogram(512)
+	h.Histograms[10] = NewHistogram(1024)
+	return h
+}
+
 // Mixer mixes several histograms together
 type Mixer struct {
-	Markov     Markov
-	Histograms []Histogram
+	Markov Markov
+	Set    HistogramSet
+	Set1   [256]HistogramSet
+	Set2   map[Markov]*HistogramSet
 }
 
 // NewMixer makes a new mixer
 func NewMixer() Mixer {
-	histograms := make([]Histogram, Size)
-	histograms[0] = NewHistogram(1)
-	histograms[1] = NewHistogram(2)
-	histograms[2] = NewHistogram(4)
-	histograms[3] = NewHistogram(8)
-	histograms[4] = NewHistogram(16)
-	histograms[5] = NewHistogram(32)
-	histograms[6] = NewHistogram(64)
-	histograms[7] = NewHistogram(128)
-	return Mixer{
-		Histograms: histograms,
+	m := Mixer{
+		Set: NewHistogramSet(),
 	}
-}
-
-// Mix mixes the histograms
-func (m Mixer) Mix() [256]byte {
-	mix := [256]byte{}
-	x := NewMatrix(256, Size)
-	for i := range m.Histograms {
-		sum := 0.0
-		for _, v := range m.Histograms[i].Vector {
-			sum += float64(v)
-		}
-		for _, v := range m.Histograms[i].Vector {
-			x.Data = append(x.Data, float64(v)/sum)
-		}
+	for i := range m.Set1 {
+		m.Set1[i] = NewHistogramSet()
 	}
-	y := SelfAttention(x, x, x).Sum()
-	sum := 0.0
-	for _, v := range y.Data {
-		sum += v
-	}
-	for i := range mix {
-		mix[i] = byte(255 * y.Data[i] / sum)
-	}
-	return mix
+	m.Set2 = make(map[Markov]*HistogramSet)
+	return m
 }
 
 // MixFloat64 mixes the histograms outputting float64
-func (m Mixer) MixFloat64() [256]float64 {
+func (m *Mixer) Mix() [256]float64 {
 	mix := [256]float64{}
-	x := NewMatrix(256, Size)
-	for i := range m.Histograms {
+	x := NewMatrix(256, 3*Size)
+	for i := range m.Set.Histograms {
 		sum := 0.0
-		for _, v := range m.Histograms[i].Vector {
+		for _, v := range m.Set.Histograms[i].Vector {
 			sum += float64(v)
 		}
-		for _, v := range m.Histograms[i].Vector {
+		for _, v := range m.Set.Histograms[i].Vector {
 			x.Data = append(x.Data, float64(v)/sum)
 		}
 	}
+	for i := range m.Set1[m.Markov[0]].Histograms {
+		sum := 0.0
+		for _, v := range m.Set1[m.Markov[0]].Histograms[i].Vector {
+			sum += float64(v)
+		}
+		for _, v := range m.Set1[m.Markov[0]].Histograms[i].Vector {
+			x.Data = append(x.Data, float64(v)/sum)
+		}
+	}
+	for i := range m.Set2[m.Markov].Histograms {
+		sum := 0.0
+		for _, v := range m.Set2[m.Markov].Histograms[i].Vector {
+			sum += float64(v)
+		}
+		for _, v := range m.Set2[m.Markov].Histograms[i].Vector {
+			x.Data = append(x.Data, float64(v)/sum)
+		}
+	}
+
 	y := SelfAttention(x, x, x).Sum()
 	sum := 0.0
 	for _, v := range y.Data {
@@ -157,13 +173,42 @@ func (m Mixer) MixFloat64() [256]float64 {
 
 // Add adds a symbol to a mixer
 func (m *Mixer) Add(s byte) {
-	for i := range m.Histograms {
-		m.Histograms[i].Add(s)
+	for i := range m.Set.Histograms {
+		m.Set.Histograms[i].Add(s)
+	}
+	for i := range m.Set1[m.Markov[0]].Histograms {
+		m.Set1[m.Markov[0]].Histograms[i].Add(s)
+	}
+	for i := range m.Set2[m.Markov].Histograms {
+		m.Set2[m.Markov].Histograms[i].Add(s)
 	}
 	m.Markov[1] = m.Markov[0]
 	m.Markov[0] = s
 }
 
+// TXT is a context
+type TXT struct {
+	Vector [256]float64
+	Symbol byte
+}
+
+// CS is the cosine similarity
+func (t *TXT) CS(vector *[256]float64) float64 {
+	aa, bb, ab := 0.0, 0.0, 0.0
+	for i := range vector {
+		a, b := vector[i], float64(t.Vector[i])
+		aa += a * a
+		bb += b * b
+		ab += a * b
+	}
+	return ab / (math.Sqrt(aa) * math.Sqrt(bb))
+}
+
 func main() {
-	Load()
+	s := Load()
+	m := NewMixer()
+	_, _ = s, m
+	for {
+
+	}
 }
