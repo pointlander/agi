@@ -176,6 +176,8 @@ func (m *Mixer) Add(s byte) {
 	for i := range m.Set.Histograms {
 		m.Set.Histograms[i].Add(s)
 	}
+	m.Markov[1] = m.Markov[0]
+	m.Markov[0] = s
 	for i := range m.Set1[m.Markov[0]].Histograms {
 		m.Set1[m.Markov[0]].Histograms[i].Add(s)
 	}
@@ -186,8 +188,6 @@ func (m *Mixer) Add(s byte) {
 	for i := range m.Set2[m.Markov].Histograms {
 		m.Set2[m.Markov].Histograms[i].Add(s)
 	}
-	m.Markov[1] = m.Markov[0]
-	m.Markov[0] = s
 }
 
 // TXT is a context
@@ -209,10 +209,65 @@ func (t *TXT) CS(vector *[256]float64) float64 {
 }
 
 func main() {
-	s := Load()
-	m := NewMixer()
-	_, _ = s, m
+	s, m := Load(), NewMixer()
+	set := s[0]
+	encoding := make([]byte, 0, 8)
+	for i := range set.Train {
+		for j := range set.Train[i].Input {
+			encoding = append(encoding, set.Train[i].Input[j]...)
+			encoding = append(encoding, 10)
+		}
+		encoding = append(encoding, 11)
+		for j := range set.Train[i].Output {
+			encoding = append(encoding, set.Train[i].Output[j]...)
+			encoding = append(encoding, 10)
+		}
+		encoding = append(encoding, 11)
+	}
+	for j := range set.Test[0].Input {
+		encoding = append(encoding, set.Test[0].Input[j]...)
+		encoding = append(encoding, 10)
+	}
+	encoding = append(encoding, 11)
+	for j := range set.Test[0].Output {
+		encoding = append(encoding, set.Test[0].Output[j]...)
+		encoding = append(encoding, 10)
+	}
+	encoding = append(encoding, 11)
+	m.Add(0)
+	txts := make([]TXT, 0, 8)
+	for i := range encoding {
+		if i < len(encoding)-1 {
+			txts = append(txts, TXT{
+				Vector: m.Mix(),
+				Symbol: encoding[i+1],
+			})
+		}
+		m.Add(encoding[i])
+	}
+	solution := make([]byte, 0, 8)
 	for {
-
+		vector, max, symbol := m.Mix(), -1.0, byte(0)
+		for i := range txts {
+			s := txts[i].CS(&vector)
+			if s > max {
+				max, symbol = s, txts[i].Symbol
+			}
+		}
+		solution = append(solution, symbol)
+		m.Add(symbol)
+		if symbol == 11 {
+			break
+		}
+	}
+	for i := range solution {
+		if solution[i] == 10 {
+			fmt.Println()
+			continue
+		} else if solution[i] == 11 {
+			fmt.Println()
+			break
+		}
+		fmt.Printf("%d ", solution[i])
 	}
 }
