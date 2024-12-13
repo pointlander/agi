@@ -290,7 +290,7 @@ func main() {
 		}
 		solution = append(solution, symbol)
 		m.Add(symbol)
-		if symbol == 11 {
+		if symbol == EndBlock {
 			break
 		}
 	}
@@ -298,12 +298,11 @@ func main() {
 		fmt.Println(set.Test[0].Output[j])
 	}
 	fmt.Println()
-	encoding = append(encoding, 11)
 	for i := range solution {
-		if solution[i] == 10 {
+		if solution[i] == EndLine {
 			fmt.Println()
 			continue
-		} else if solution[i] == 11 {
+		} else if solution[i] == EndBlock {
 			fmt.Println()
 			break
 		}
