@@ -370,7 +370,9 @@ func Learn(txts []TXT) Neural {
 			}
 		}
 		points = append(points, plotter.XY{X: float64(i), Y: float64(cost)})
-		fmt.Println(cost)
+		if i%1024 == 0 {
+			fmt.Println(cost)
+		}
 	}
 
 	p := plot.New()
@@ -398,6 +400,25 @@ func Learn(txts []TXT) Neural {
 		L2:     l2,
 		Loss:   loss,
 	}
+}
+
+// Inference performs inference of the neural network
+func (n *Neural) Inference(input [256]float64) int {
+	symbol, max := 0, 0.0
+	in := n.Others.ByName["input"].X
+	for i := range in {
+		in[i] = input[i]
+	}
+	n.L2(func(a *tf64.V) bool {
+		for i, v := range a.X {
+			if v > max {
+				max, symbol = v, i
+			}
+		}
+		return true
+	})
+
+	return symbol
 }
 
 func main() {
@@ -432,7 +453,6 @@ func main() {
 		m.Add(encoding[i])
 	}
 	neural := Learn(txts)
-	_ = neural
 	m.Add(encoding[len(encoding)-1])
 	solution := make([]byte, 0, 8)
 	for {
@@ -444,6 +464,8 @@ func main() {
 			}
 		}
 		solution = append(solution, symbol)
+		sym := neural.Inference(vector)
+		fmt.Println(sym)
 		m.Add(symbol)
 		if symbol == EndBlock {
 			break
