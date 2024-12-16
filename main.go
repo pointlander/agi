@@ -10,6 +10,7 @@ import (
 	"math"
 	"math/rand"
 	"os"
+	"sort"
 	"strings"
 
 	"github.com/pointlander/gradient/tf64"
@@ -252,6 +253,7 @@ func (m *Mixer) Add(s byte) {
 type TXT struct {
 	Vector [256]float64
 	Symbol byte
+	Rank   float64
 }
 
 // CS is the cosine similarity
@@ -452,20 +454,29 @@ func main() {
 		}
 		m.Add(encoding[i])
 	}
-	neural := Learn(txts)
+	//neural := Learn(txts)
 	m.Add(encoding[len(encoding)-1])
 	solution := make([]byte, 0, 8)
 	for {
 		vector, max, symbol := m.Mix(), -1.0, byte(0)
 		for i := range txts {
 			s := txts[i].CS(&vector)
+			txts[i].Rank = s
 			if s > max {
 				max, symbol = s, txts[i].Symbol
 			}
 		}
+		sort.Slice(txts, func(i, j int) bool {
+			return txts[i].Rank > txts[j].Rank
+		})
+		for i := 0; i < 15; i++ {
+			fmt.Println(txts[i].Symbol)
+		}
+		fmt.Println()
+
 		solution = append(solution, symbol)
-		sym := neural.Inference(vector)
-		fmt.Println(sym)
+		//sym := neural.Inference(vector)
+		//fmt.Println(sym)
 		m.Add(symbol)
 		if symbol == EndBlock {
 			break
