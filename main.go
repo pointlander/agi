@@ -15,6 +15,7 @@ import (
 
 	"github.com/pointlander/gradient/tf64"
 
+	"github.com/fxsjy/RF.go/RF"
 	"gonum.org/v1/plot"
 	"gonum.org/v1/plot/plotter"
 	"gonum.org/v1/plot/vg"
@@ -41,7 +42,9 @@ const (
 
 const (
 	// Size is the number of histograms
-	Size = 11
+	Size = 14
+	// Buffer is the buffer size
+	Buffer = 1 << 14
 	// Rows is the number of rows the matrix has
 	Rows = 4 * Size
 	// EndLine is the end of the line
@@ -99,7 +102,7 @@ type Markov3 [3]byte
 // Histogram is a buffered histogram
 type Histogram struct {
 	Vector [256]uint16
-	Buffer [1024]byte
+	Buffer [Buffer]byte
 	Index  int
 	Size   int
 }
@@ -142,6 +145,9 @@ func NewHistogramSet() HistogramSet {
 	h.Histograms[8] = NewHistogram(256)
 	h.Histograms[9] = NewHistogram(512)
 	h.Histograms[10] = NewHistogram(1024)
+	h.Histograms[11] = NewHistogram(2048)
+	h.Histograms[12] = NewHistogram(4096)
+	h.Histograms[13] = NewHistogram(2 * 4096)
 	return h
 }
 
@@ -454,6 +460,17 @@ func main() {
 		}
 		m.Add(encoding[i])
 	}
+	inputs := make([][]interface{}, 0)
+	targets := make([]string, 0)
+	for i := range txts {
+		row := make([]interface{}, 0)
+		for j := range txts[i].Vector {
+			row = append(row, txts[i].Vector[j])
+		}
+		inputs = append(inputs, row)
+		targets = append(targets, fmt.Sprintf("%d", txts[i].Symbol))
+	}
+	RF.DefaultForest(inputs, targets, 100)
 	//neural := Learn(txts)
 	m.Add(encoding[len(encoding)-1])
 	solution := make([]byte, 0, 8)
