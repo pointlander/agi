@@ -46,6 +46,8 @@ const (
 	Size = 11
 	// Buffer is the buffer size
 	Buffer = 1 << Size
+	// T is the temperature factor
+	T = 1
 	// Rows is the number of rows the matrix has
 	Rows = 4 * Size
 	// EndLine is the end of the line
@@ -172,7 +174,7 @@ func NewMixer() Mixer {
 	return m
 }
 
-// MixFloat64 mixes the histograms outputting float64
+// Mix mixes the histograms outputting float64
 func (m *Mixer) Mix() [256]float64 {
 	mix := [256]float64{}
 	x := NewMatrix(256, Rows)
@@ -211,6 +213,93 @@ func (m *Mixer) Mix() [256]float64 {
 		for _, v := range m.Set3[m.Markov3].Histograms[i].Vector {
 			x.Data = append(x.Data, float64(v)/sum)
 		}
+	}
+
+	y := SelfAttention(x, x, x).Sum()
+	sum := 0.0
+	for _, v := range y.Data {
+		sum += v
+	}
+	for i := range mix {
+		mix[i] = y.Data[i] / sum
+	}
+	return mix
+}
+
+// Computes the softmax of a vector
+func Softmax(vector *[256]float64, T float64) {
+	max := 0.0
+	for _, v := range vector {
+		v /= T
+		if v > max {
+			max = v
+		}
+	}
+	s := max * S
+	sum := 0.0
+	values := [256]float64{}
+	for j, value := range vector {
+		values[j] = math.Exp(value/T - s)
+		sum += values[j]
+	}
+	for j, value := range values {
+		vector[j] = value / sum
+	}
+}
+
+// RandVector returns a random vector
+func RandVector(seed int64) (vector [256]float64) {
+	rng := rand.New(rand.NewSource(seed))
+	for i := range vector {
+		vector[i] = math.Abs(rng.NormFloat64())
+	}
+	Softmax(&vector, T)
+	return vector
+}
+
+// MixRand mixes the histograms and a random vector outputting float64
+func (m *Mixer) MixRand(seed int64) [256]float64 {
+	mix := [256]float64{}
+	x := NewMatrix(256, Rows+1)
+	for i := range m.Set.Histograms {
+		sum := 0.0
+		for _, v := range m.Set.Histograms[i].Vector {
+			sum += float64(v)
+		}
+		for _, v := range m.Set.Histograms[i].Vector {
+			x.Data = append(x.Data, float64(v)/sum)
+		}
+	}
+	for i := range m.Set1[m.Markov2[0]].Histograms {
+		sum := 0.0
+		for _, v := range m.Set1[m.Markov2[0]].Histograms[i].Vector {
+			sum += float64(v)
+		}
+		for _, v := range m.Set1[m.Markov2[0]].Histograms[i].Vector {
+			x.Data = append(x.Data, float64(v)/sum)
+		}
+	}
+	for i := range m.Set2[m.Markov2].Histograms {
+		sum := 0.0
+		for _, v := range m.Set2[m.Markov2].Histograms[i].Vector {
+			sum += float64(v)
+		}
+		for _, v := range m.Set2[m.Markov2].Histograms[i].Vector {
+			x.Data = append(x.Data, float64(v)/sum)
+		}
+	}
+	for i := range m.Set3[m.Markov3].Histograms {
+		sum := 0.0
+		for _, v := range m.Set3[m.Markov3].Histograms[i].Vector {
+			sum += float64(v)
+		}
+		for _, v := range m.Set3[m.Markov3].Histograms[i].Vector {
+			x.Data = append(x.Data, float64(v)/sum)
+		}
+	}
+	vec := RandVector(seed)
+	for _, v := range vec {
+		x.Data = append(x.Data, v)
 	}
 
 	y := SelfAttention(x, x, x).Sum()
@@ -490,24 +579,53 @@ func main() {
 	//neural := Learn(txts)
 	m.Add(encoding[len(encoding)-1])
 	solution := make([]byte, 0, 8)
+	seed := int64(1)
 	for {
-		vector := m.Mix()
-		max, symbol := -1.0, byte(0)
-		for i := range txts {
-			s := txts[i].CS(&vector)
-			txts[i].Rank = s
-			if s > max {
-				max, symbol = s, txts[i].Symbol
+		histogram := [256]int{}
+		for j := 0; j < 33; j++ {
+			vector := m.MixRand(seed)
+			seed++
+			for i := range txts {
+				s := txts[i].CS(&vector)
+				txts[i].Rank = s
+			}
+			average := [256]float64{}
+			count := [256]float64{}
+			for i := range txts {
+				average[txts[i].Symbol] += txts[i].Rank
+				count[txts[i].Symbol]++
+			}
+			stddev := [256]float64{}
+			for i := range average {
+				if count[i] == 0 {
+					continue
+				}
+				average[i] /= count[i]
+			}
+			for i := range txts {
+				diff := txts[i].Rank - average[txts[i].Symbol]
+				stddev[txts[i].Symbol] = diff * diff
+			}
+			for i := range stddev {
+				if count[i] == 0 {
+					continue
+				}
+				stddev[i] = math.Sqrt(stddev[i] / count[i])
+			}
+			sort.Slice(txts, func(i, j int) bool {
+				return stddev[txts[i].Symbol] > stddev[txts[j].Symbol]
+			})
+			for i := 0; i < 8; i++ {
+				histogram[txts[i].Symbol]++
 			}
 		}
-		sort.Slice(txts, func(i, j int) bool {
-			return txts[i].Rank > txts[j].Rank
-		})
-		for i := 0; i < 15; i++ {
-			fmt.Println(txts[i].Symbol)
+		fmt.Println(histogram)
+		max, symbol := 0, byte(0)
+		for i, v := range histogram {
+			if v > max {
+				max, symbol = v, byte(i)
+			}
 		}
-		fmt.Println()
-
 		solution = append(solution, symbol)
 		//sym := neural.Inference(vector)
 		//fmt.Println(sym)
