@@ -10,7 +10,8 @@ import (
 	"math"
 	"math/rand"
 	"os"
-	"sort"
+	//"sort"
+	"strconv"
 	"strings"
 
 	"github.com/pointlander/gradient/tf64"
@@ -470,12 +471,13 @@ func main() {
 		inputs = append(inputs, row)
 		targets = append(targets, fmt.Sprintf("%d", txts[i].Symbol))
 	}
-	RF.DefaultForest(inputs, targets, 100)
+	rf := RF.BuildForest(inputs, targets, 1024, len(inputs), 256)
 	//neural := Learn(txts)
 	m.Add(encoding[len(encoding)-1])
 	solution := make([]byte, 0, 8)
-	for {
-		vector, max, symbol := m.Mix(), -1.0, byte(0)
+	for i := 0; i < 30*30; i++ {
+		vector := m.Mix()
+		/*max, symbol := -1.0, byte(0)
 		for i := range txts {
 			s := txts[i].CS(&vector)
 			txts[i].Rank = s
@@ -489,13 +491,21 @@ func main() {
 		for i := 0; i < 15; i++ {
 			fmt.Println(txts[i].Symbol)
 		}
-		fmt.Println()
-
-		solution = append(solution, symbol)
+		fmt.Println()*/
+		input := make([]interface{}, 0, 8)
+		for _, v := range vector {
+			input = append(input, v)
+		}
+		y := rf.Predicate(input)
+		i, err := strconv.Atoi(y)
+		if err != nil {
+			panic(err)
+		}
+		solution = append(solution, byte(i))
 		//sym := neural.Inference(vector)
 		//fmt.Println(sym)
-		m.Add(symbol)
-		if symbol == EndBlock {
+		m.Add(byte(i))
+		if i == EndBlock {
 			break
 		}
 	}
