@@ -10,7 +10,7 @@ import (
 	"math"
 	"math/rand"
 	"os"
-	//"sort"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -43,9 +43,9 @@ const (
 
 const (
 	// Size is the number of histograms
-	Size = 14
+	Size = 11
 	// Buffer is the buffer size
-	Buffer = 1 << 14
+	Buffer = 1 << Size
 	// Rows is the number of rows the matrix has
 	Rows = 4 * Size
 	// EndLine is the end of the line
@@ -146,9 +146,6 @@ func NewHistogramSet() HistogramSet {
 	h.Histograms[8] = NewHistogram(256)
 	h.Histograms[9] = NewHistogram(512)
 	h.Histograms[10] = NewHistogram(1024)
-	h.Histograms[11] = NewHistogram(2048)
-	h.Histograms[12] = NewHistogram(4096)
-	h.Histograms[13] = NewHistogram(2 * 4096)
 	return h
 }
 
@@ -430,6 +427,35 @@ func (n *Neural) Inference(input [256]float64) int {
 	return symbol
 }
 
+// NewForest builds a random forest
+func NewForest(txts []TXT) *RF.Forest {
+	inputs := make([][]interface{}, 0)
+	targets := make([]string, 0)
+	for i := range txts {
+		row := make([]interface{}, 0)
+		for j := range txts[i].Vector {
+			row = append(row, txts[i].Vector[j])
+		}
+		inputs = append(inputs, row)
+		targets = append(targets, fmt.Sprintf("%d", txts[i].Symbol))
+	}
+	return RF.BuildForest(inputs, targets, 1024, len(inputs), 256)
+}
+
+// ForestInference run inference on random forest
+func ForestInference(rf *RF.Forest, vector [256]float64) int {
+	input := make([]interface{}, 0, 8)
+	for _, v := range vector {
+		input = append(input, v)
+	}
+	y := rf.Predicate(input)
+	i, err := strconv.Atoi(y)
+	if err != nil {
+		panic(err)
+	}
+	return i
+}
+
 func main() {
 	s, m := Load(), NewMixer()
 	set := s[0]
@@ -461,23 +487,12 @@ func main() {
 		}
 		m.Add(encoding[i])
 	}
-	inputs := make([][]interface{}, 0)
-	targets := make([]string, 0)
-	for i := range txts {
-		row := make([]interface{}, 0)
-		for j := range txts[i].Vector {
-			row = append(row, txts[i].Vector[j])
-		}
-		inputs = append(inputs, row)
-		targets = append(targets, fmt.Sprintf("%d", txts[i].Symbol))
-	}
-	rf := RF.BuildForest(inputs, targets, 1024, len(inputs), 256)
 	//neural := Learn(txts)
 	m.Add(encoding[len(encoding)-1])
 	solution := make([]byte, 0, 8)
-	for i := 0; i < 30*30; i++ {
+	for {
 		vector := m.Mix()
-		/*max, symbol := -1.0, byte(0)
+		max, symbol := -1.0, byte(0)
 		for i := range txts {
 			s := txts[i].CS(&vector)
 			txts[i].Rank = s
@@ -491,21 +506,13 @@ func main() {
 		for i := 0; i < 15; i++ {
 			fmt.Println(txts[i].Symbol)
 		}
-		fmt.Println()*/
-		input := make([]interface{}, 0, 8)
-		for _, v := range vector {
-			input = append(input, v)
-		}
-		y := rf.Predicate(input)
-		i, err := strconv.Atoi(y)
-		if err != nil {
-			panic(err)
-		}
-		solution = append(solution, byte(i))
+		fmt.Println()
+
+		solution = append(solution, symbol)
 		//sym := neural.Inference(vector)
 		//fmt.Println(sym)
-		m.Add(byte(i))
-		if i == EndBlock {
+		m.Add(symbol)
+		if symbol == EndBlock {
 			break
 		}
 	}
