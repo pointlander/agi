@@ -552,7 +552,9 @@ func main() {
 	for i := range set.Train {
 		for j := range set.Train[i].Input {
 			encoding = append(encoding, set.Train[i].Input[j]...)
-			encoding = append(encoding, EndLine)
+			if j < len(set.Train[i].Input)-1 {
+				encoding = append(encoding, EndLine)
+			}
 		}
 		encoding = append(encoding, EndBlock)
 		for j := range set.Train[i].Output {
@@ -565,9 +567,11 @@ func main() {
 	}
 	for j := range set.Test[0].Input {
 		encoding = append(encoding, set.Test[0].Input[j]...)
-		encoding = append(encoding, EndLine)
+		if j < len(set.Test[0].Input)-1 {
+			encoding = append(encoding, EndLine)
+		}
 	}
-	//encoding = append(encoding, EndBlock)
+	encoding = append(encoding, EndBlock)
 	txts := make([]TXT, 0, 8)
 	for i := range encoding[:len(encoding)-1] {
 		m.Add(encoding[i])
