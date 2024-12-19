@@ -581,17 +581,17 @@ func main() {
 	//neural := Learn(txts)
 	m.Add(encoding[len(encoding)-1])
 	solution := make([]byte, 0, 8)
-	seed := int64(1)
+	//seed := int64(1)
 	for {
 		histogram := [256]int{}
 		for j := 0; j < 33; j++ {
-			vector := m.MixRand(seed)
-			seed++
+			vector := m.Mix()
+			//seed++
 			for i := range txts {
 				s := txts[i].CS(&vector)
 				txts[i].Rank = s
 			}
-			average := [256]float64{}
+			/*average := [256]float64{}
 			count := [256]float64{}
 			for i := range txts {
 				average[txts[i].Symbol] += txts[i].Rank
@@ -613,7 +613,7 @@ func main() {
 					continue
 				}
 				stddev[i] = math.Sqrt(stddev[i] / count[i])
-			}
+			}*/
 			sort.Slice(txts, func(i, j int) bool {
 				return txts[i].Rank > txts[j].Rank //stddev[txts[i].Symbol] < stddev[txts[j].Symbol]
 			})
