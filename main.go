@@ -557,7 +557,9 @@ func main() {
 		encoding = append(encoding, EndBlock)
 		for j := range set.Train[i].Output {
 			encoding = append(encoding, set.Train[i].Output[j]...)
-			encoding = append(encoding, EndLine)
+			if j < len(set.Train[i].Output)-1 {
+				encoding = append(encoding, EndLine)
+			}
 		}
 		encoding = append(encoding, EndBlock)
 	}
@@ -565,7 +567,7 @@ func main() {
 		encoding = append(encoding, set.Test[0].Input[j]...)
 		encoding = append(encoding, EndLine)
 	}
-	encoding = append(encoding, EndBlock)
+	//encoding = append(encoding, EndBlock)
 	txts := make([]TXT, 0, 8)
 	for i := range encoding[:len(encoding)-1] {
 		m.Add(encoding[i])
@@ -613,7 +615,7 @@ func main() {
 				stddev[i] = math.Sqrt(stddev[i] / count[i])
 			}
 			sort.Slice(txts, func(i, j int) bool {
-				return stddev[txts[i].Symbol] < stddev[txts[j].Symbol]
+				return txts[i].Rank > txts[j].Rank //stddev[txts[i].Symbol] < stddev[txts[j].Symbol]
 			})
 			for i := 0; i < 8; i++ {
 				histogram[txts[i].Symbol]++
@@ -643,6 +645,7 @@ func main() {
 			fmt.Println()
 			continue
 		} else if solution[i] == EndBlock {
+			fmt.Println()
 			fmt.Println()
 			break
 		}
