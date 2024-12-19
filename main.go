@@ -568,13 +568,13 @@ func main() {
 	encoding = append(encoding, EndBlock)
 	txts := make([]TXT, 0, 8)
 	for i := range encoding[:len(encoding)-1] {
+		m.Add(encoding[i])
 		if i > 0 {
 			txts = append(txts, TXT{
 				Vector: m.Mix(),
 				Symbol: encoding[i+1],
 			})
 		}
-		m.Add(encoding[i])
 	}
 	//neural := Learn(txts)
 	m.Add(encoding[len(encoding)-1])
@@ -613,7 +613,7 @@ func main() {
 				stddev[i] = math.Sqrt(stddev[i] / count[i])
 			}
 			sort.Slice(txts, func(i, j int) bool {
-				return stddev[txts[i].Symbol] > stddev[txts[j].Symbol]
+				return stddev[txts[i].Symbol] < stddev[txts[j].Symbol]
 			})
 			for i := 0; i < 8; i++ {
 				histogram[txts[i].Symbol]++
