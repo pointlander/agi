@@ -137,17 +137,9 @@ type HistogramSet struct {
 // NewHistogramSet makes a new histogram set
 func NewHistogramSet() HistogramSet {
 	h := HistogramSet{}
-	h.Histograms[0] = NewHistogram(1)
-	h.Histograms[1] = NewHistogram(2)
-	h.Histograms[2] = NewHistogram(4)
-	h.Histograms[3] = NewHistogram(8)
-	h.Histograms[4] = NewHistogram(16)
-	h.Histograms[5] = NewHistogram(32)
-	h.Histograms[6] = NewHistogram(64)
-	h.Histograms[7] = NewHistogram(128)
-	h.Histograms[8] = NewHistogram(256)
-	h.Histograms[9] = NewHistogram(512)
-	h.Histograms[10] = NewHistogram(1024)
+	for i := range h.Histograms {
+		h.Histograms[i] = NewHistogram(1 << i)
+	}
 	return h
 }
 
