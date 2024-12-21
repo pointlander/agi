@@ -166,6 +166,29 @@ func NewMixer() Mixer {
 	return m
 }
 
+// Copy copies a mixer
+func (m *Mixer) Copy() Mixer {
+	n := Mixer{
+		Markov2: m.Markov2,
+		Markov3: m.Markov3,
+		Set:     m.Set,
+		Set1:    m.Set1,
+	}
+	n.Set2 = make(map[Markov2]*HistogramSet)
+	for k, v := range m.Set2 {
+		h := NewHistogramSet()
+		h = *v
+		n.Set2[k] = &h
+	}
+	n.Set3 = make(map[Markov3]*HistogramSet)
+	for k, v := range m.Set3 {
+		h := NewHistogramSet()
+		h = *v
+		n.Set3[k] = &h
+	}
+	return n
+}
+
 // Mix mixes the histograms outputting float64
 func (m *Mixer) Mix() [256]float64 {
 	mix := [256]float64{}
