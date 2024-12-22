@@ -10,7 +10,6 @@ import (
 	"math"
 	"math/rand"
 	"os"
-	"sort"
 	"strconv"
 	"strings"
 
@@ -361,7 +360,6 @@ func (m *Mixer) Add(s byte) {
 type TXT struct {
 	Vector [256]float64
 	Symbol byte
-	Rank   float64
 }
 
 // CS is the cosine similarity
@@ -560,6 +558,28 @@ func ForestInference(rf *RF.Forest, vector [256]float64) int {
 	return i
 }
 
+// Top is a top
+type Top struct {
+	TXT  *TXT
+	Rank float64
+}
+
+// Top8 is the top 8
+type Top8 [8]Top
+
+// Top8Sort sorts the top 8 results
+func (t *Top8) Top8Sort(txts []TXT, vector *[256]float64) {
+	for i := range txts {
+		s := txts[i].CS(vector)
+		for j := range t {
+			if s > t[j].Rank {
+				t[j].Rank, t[j].TXT = s, &txts[j]
+				break
+			}
+		}
+	}
+}
+
 func main() {
 	s, m := Load(), NewMixer()
 	set := s[0]
@@ -600,44 +620,14 @@ func main() {
 	//neural := Learn(txts)
 	m.Add(encoding[len(encoding)-1])
 	solution := make([]byte, 0, 8)
-	//seed := int64(1)
 	for {
 		histogram := [256]int{}
 		for j := 0; j < 33; j++ {
 			vector := m.Mix()
-			//seed++
-			for i := range txts {
-				s := txts[i].CS(&vector)
-				txts[i].Rank = s
-			}
-			/*average := [256]float64{}
-			count := [256]float64{}
-			for i := range txts {
-				average[txts[i].Symbol] += txts[i].Rank
-				count[txts[i].Symbol]++
-			}
-			stddev := [256]float64{}
-			for i := range average {
-				if count[i] == 0 {
-					continue
-				}
-				average[i] /= count[i]
-			}
-			for i := range txts {
-				diff := txts[i].Rank - average[txts[i].Symbol]
-				stddev[txts[i].Symbol] = diff * diff
-			}
-			for i := range stddev {
-				if count[i] == 0 {
-					continue
-				}
-				stddev[i] = math.Sqrt(stddev[i] / count[i])
-			}*/
-			sort.Slice(txts, func(i, j int) bool {
-				return txts[i].Rank > txts[j].Rank //stddev[txts[i].Symbol] < stddev[txts[j].Symbol]
-			})
-			for i := 0; i < 8; i++ {
-				histogram[txts[i].Symbol]++
+			top := Top8{}
+			top.Top8Sort(txts, &vector)
+			for i := range top {
+				histogram[top[i].TXT.Symbol]++
 			}
 		}
 		fmt.Println(histogram)
