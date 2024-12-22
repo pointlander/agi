@@ -621,14 +621,10 @@ func main() {
 	m.Add(encoding[len(encoding)-1])
 	solution := make([]byte, 0, 8)
 	for {
-		histogram := [256]int{}
-		for j := 0; j < 33; j++ {
-			vector := m.Mix()
-			top := Top8{}
-			top.Top8Sort(txts, &vector)
-			for i := range top {
-				histogram[top[i].TXT.Symbol]++
-			}
+		histogram, vector, top := [256]int{}, m.Mix(), Top8{}
+		top.Top8Sort(txts, &vector)
+		for i := range top {
+			histogram[top[i].TXT.Symbol]++
 		}
 		fmt.Println(histogram)
 		max, symbol := 0, byte(0)
