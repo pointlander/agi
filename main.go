@@ -573,7 +573,7 @@ func (t *Top8) Top8Sort(txts []TXT, vector *[256]float64) {
 		s := txts[i].CS(vector)
 		for j := range t {
 			if s > t[j].Rank {
-				t[j].Rank, t[j].TXT = s, &txts[j]
+				t[j].Rank, t[j].TXT = s, &txts[i]
 				break
 			}
 		}
@@ -629,6 +629,29 @@ func main() {
 		fmt.Println(histogram)
 		max, symbol := 0, byte(0)
 		for i, v := range histogram {
+			if v > 0 {
+				cp := m.Copy()
+				cp.Add(byte(i))
+				histogram, vector, top := [256]int{}, cp.Mix(), Top8{}
+				top.Top8Sort(txts, &vector)
+				for i := range top {
+					histogram[top[i].TXT.Symbol]++
+				}
+				fmt.Println(i, histogram)
+				avg, count := 0.0, 0.0
+				for i := range histogram {
+					avg += float64(histogram[i])
+					count++
+				}
+				avg /= count
+				stddev := 0.0
+				for i := range histogram {
+					diff := float64(histogram[i]) - avg
+					stddev += diff * diff
+				}
+				stddev = math.Sqrt(stddev / count)
+				fmt.Printf("%.32f\n", stddev)
+			}
 			if v > max {
 				max, symbol = v, byte(i)
 			}
