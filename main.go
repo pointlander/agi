@@ -651,7 +651,9 @@ func main() {
 			stddev = math.Sqrt(stddev / count)
 			return stddev
 		}
-		histogram, vector, top := [256]int{}, m.Mix(), Top8{}
+		cp := m.Copy()
+		cp.Add(action)
+		histogram, vector, top := [256]int{}, cp.Mix(), Top8{}
 		top.Top8Sort(txts, &vector)
 		for i := range top {
 			histogram[top[i].TXT.Symbol]++
@@ -659,7 +661,7 @@ func main() {
 		max := 0.0
 		for i, v := range histogram {
 			if v > 0 {
-				x := min(depth+1, byte(i), m)
+				x := min(depth+1, byte(i), &cp)
 				if x > max {
 					max = x
 				}
@@ -694,7 +696,9 @@ func main() {
 			stddev = math.Sqrt(stddev / count)
 			return stddev
 		}
-		histogram, vector, top := [256]int{}, m.Mix(), Top8{}
+		cp := m.Copy()
+		cp.Add(action)
+		histogram, vector, top := [256]int{}, cp.Mix(), Top8{}
 		top.Top8Sort(txts, &vector)
 		for i := range top {
 			histogram[top[i].TXT.Symbol]++
@@ -702,7 +706,7 @@ func main() {
 		min := math.MaxFloat64
 		for i, v := range histogram {
 			if v > 0 {
-				x := max(depth+1, byte(i), m)
+				x := max(depth+1, byte(i), &cp)
 				if x < min {
 					min = x
 				}
