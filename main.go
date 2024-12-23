@@ -620,47 +620,107 @@ func main() {
 	//neural := Learn(txts)
 	m.Add(encoding[len(encoding)-1])
 	solution := make([]byte, 0, 8)
+	const Depth = 3
+	var max func(int, byte, *Mixer) float64
+	var min func(int, byte, *Mixer) float64
+	max = func(depth int, action byte, m *Mixer) float64 {
+		if depth < Depth {
+			cp := m.Copy()
+			cp.Add(action)
+			histogram, vector, top := [256]int{}, cp.Mix(), Top8{}
+			top.Top8Sort(txts, &vector)
+			for i := range top {
+				histogram[top[i].TXT.Symbol]++
+			}
+			avg, count := 0.0, 0.0
+			for i := range histogram {
+				avg += float64(histogram[i])
+				count++
+			}
+			avg /= count
+			stddev := 0.0
+			for i := range histogram {
+				diff := float64(histogram[i]) - avg
+				stddev += diff * diff
+			}
+			stddev = math.Sqrt(stddev / count)
+			return stddev
+		}
+		histogram, vector, top := [256]int{}, m.Mix(), Top8{}
+		top.Top8Sort(txts, &vector)
+		for i := range top {
+			histogram[top[i].TXT.Symbol]++
+		}
+		max := 0.0
+		for i, v := range histogram {
+			if v > 0 {
+				x := min(depth+1, byte(i), m)
+				if x > max {
+					max = x
+				}
+			}
+		}
+		return max
+	}
+	min = func(depth int, action byte, m *Mixer) float64 {
+		if depth < Depth {
+			cp := m.Copy()
+			cp.Add(action)
+			histogram, vector, top := [256]int{}, cp.Mix(), Top8{}
+			top.Top8Sort(txts, &vector)
+			for i := range top {
+				histogram[top[i].TXT.Symbol]++
+			}
+			avg, count := 0.0, 0.0
+			for i := range histogram {
+				avg += float64(histogram[i])
+				count++
+			}
+			avg /= count
+			stddev := 0.0
+			for i := range histogram {
+				diff := float64(histogram[i]) - avg
+				stddev += diff * diff
+			}
+			stddev = math.Sqrt(stddev / count)
+			return stddev
+		}
+		histogram, vector, top := [256]int{}, m.Mix(), Top8{}
+		top.Top8Sort(txts, &vector)
+		for i := range top {
+			histogram[top[i].TXT.Symbol]++
+		}
+		min := math.MaxFloat64
+		for i, v := range histogram {
+			if v > 0 {
+				x := max(depth+1, byte(i), m)
+				if x < min {
+					min = x
+				}
+			}
+		}
+		return min
+	}
 	for {
 		histogram, vector, top := [256]int{}, m.Mix(), Top8{}
 		top.Top8Sort(txts, &vector)
 		for i := range top {
 			histogram[top[i].TXT.Symbol]++
 		}
-		fmt.Println(histogram)
-		max, symbol := 0, byte(0)
+		action, xx := byte(0), 0.0
 		for i, v := range histogram {
 			if v > 0 {
-				cp := m.Copy()
-				cp.Add(byte(i))
-				histogram, vector, top := [256]int{}, cp.Mix(), Top8{}
-				top.Top8Sort(txts, &vector)
-				for i := range top {
-					histogram[top[i].TXT.Symbol]++
+				x := max(0, byte(i), &m)
+				if x > xx {
+					action, xx = byte(i), x
 				}
-				fmt.Println(i, histogram)
-				avg, count := 0.0, 0.0
-				for i := range histogram {
-					avg += float64(histogram[i])
-					count++
-				}
-				avg /= count
-				stddev := 0.0
-				for i := range histogram {
-					diff := float64(histogram[i]) - avg
-					stddev += diff * diff
-				}
-				stddev = math.Sqrt(stddev / count)
-				fmt.Printf("%.32f\n", stddev)
-			}
-			if v > max {
-				max, symbol = v, byte(i)
 			}
 		}
-		solution = append(solution, symbol)
+		solution = append(solution, action)
 		//sym := neural.Inference(vector)
 		//fmt.Println(sym)
-		m.Add(symbol)
-		if symbol == EndBlock {
+		m.Add(action)
+		if action == EndBlock {
 			break
 		}
 	}
