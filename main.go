@@ -624,7 +624,7 @@ func main() {
 	//neural := Learn(txts)
 	m.Add(encoding[len(encoding)-1])
 	solution := make([]byte, 0, 8)
-	const Depth = 3
+	const Depth = 5
 	var max func(int, byte, *Mixer) float64
 	var min func(int, byte, *Mixer) float64
 	max = func(depth int, action byte, m *Mixer) float64 {
@@ -641,7 +641,15 @@ func main() {
 			for i := range histogram {
 				sum += float64(histogram[i])
 			}
-			avg, count := 0.0, 0.0
+			e := 0.0
+			for _, v := range histogram {
+				if v == 0 {
+					continue
+				}
+				e += float64(v) * math.Log(float64(v)/sum) / sum
+			}
+			return -e
+			/*avg, count := 0.0, 0.0
 			for i := range histogram {
 				avg += float64(histogram[i]) / sum
 				count++
@@ -653,7 +661,7 @@ func main() {
 				stddev += diff * diff
 			}
 			stddev = math.Sqrt(stddev / count)
-			return stddev
+			return stddev*/
 		}
 		cp := m.Copy()
 		cp.Add(action)
@@ -686,7 +694,15 @@ func main() {
 			for i := range histogram {
 				sum += float64(histogram[i])
 			}
-			avg, count := 0.0, 0.0
+			e := 0.0
+			for _, v := range histogram {
+				if v == 0 {
+					continue
+				}
+				e += float64(v) * math.Log(float64(v)/sum) / sum
+			}
+			return -e
+			/*avg, count := 0.0, 0.0
 			for i := range histogram {
 				avg += float64(histogram[i]) / sum
 				count++
@@ -698,7 +714,7 @@ func main() {
 				stddev += diff * diff
 			}
 			stddev = math.Sqrt(stddev / count)
-			return stddev
+			return stddev*/
 		}
 		cp := m.Copy()
 		cp.Add(action)
