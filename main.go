@@ -624,7 +624,7 @@ func main() {
 	var max func(int, byte, *Mixer) float64
 	var min func(int, byte, *Mixer) float64
 	max = func(depth int, action byte, m *Mixer) float64 {
-		if depth < Depth {
+		if depth >= Depth {
 			cp := m.Copy()
 			cp.Add(action)
 			histogram, vector, top := [256]int{}, cp.Mix(), Top8{}
@@ -663,7 +663,7 @@ func main() {
 		return max
 	}
 	min = func(depth int, action byte, m *Mixer) float64 {
-		if depth < Depth {
+		if depth >= Depth {
 			cp := m.Copy()
 			cp.Add(action)
 			histogram, vector, top := [256]int{}, cp.Mix(), Top8{}
@@ -719,6 +719,7 @@ func main() {
 		solution = append(solution, action)
 		//sym := neural.Inference(vector)
 		//fmt.Println(sym)
+		fmt.Println(action)
 		m.Add(action)
 		if action == EndBlock {
 			break
