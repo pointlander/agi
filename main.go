@@ -628,19 +628,24 @@ func main() {
 			cp := m.Copy()
 			cp.Add(action)
 			histogram, vector, top := [256]int{}, cp.Mix(), Top8{}
+
 			top.Top8Sort(txts, &vector)
 			for i := range top {
 				histogram[top[i].TXT.Symbol]++
 			}
+			sum := 0.0
+			for i := range histogram {
+				sum += float64(histogram[i])
+			}
 			avg, count := 0.0, 0.0
 			for i := range histogram {
-				avg += float64(histogram[i])
+				avg += float64(histogram[i]) / sum
 				count++
 			}
 			avg /= count
 			stddev := 0.0
 			for i := range histogram {
-				diff := float64(histogram[i]) - avg
+				diff := (float64(histogram[i]) / sum) - avg
 				stddev += diff * diff
 			}
 			stddev = math.Sqrt(stddev / count)
@@ -671,15 +676,19 @@ func main() {
 			for i := range top {
 				histogram[top[i].TXT.Symbol]++
 			}
+			sum := 0.0
+			for i := range histogram {
+				sum += float64(histogram[i])
+			}
 			avg, count := 0.0, 0.0
 			for i := range histogram {
-				avg += float64(histogram[i])
+				avg += float64(histogram[i]) / sum
 				count++
 			}
 			avg /= count
 			stddev := 0.0
 			for i := range histogram {
-				diff := float64(histogram[i]) - avg
+				diff := (float64(histogram[i]) / sum) - avg
 				stddev += diff * diff
 			}
 			stddev = math.Sqrt(stddev / count)
