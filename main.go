@@ -573,6 +573,10 @@ func (t *Top8) Top8Sort(txts []TXT, vector *[256]float64) {
 		s := txts[i].CS(vector)
 		for j := range t {
 			if s > t[j].Rank {
+				next := t[j]
+				for k := j + 1; k < len(t); k++ {
+					t[k], next = next, t[k]
+				}
 				t[j].Rank, t[j].TXT = s, &txts[i]
 				break
 			}
