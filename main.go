@@ -584,6 +584,120 @@ func (t *Top8) Top8Sort(txts []TXT, vector *[256]float64) {
 	}
 }
 
+// Depth is the minimax search depth
+const Depth = 5
+
+// Max is the minimax max function
+func Max(txts []TXT, depth int, action byte, m *Mixer) float64 {
+	if depth >= Depth {
+		cp := m.Copy()
+		cp.Add(action)
+		histogram, vector, top := [256]int{}, cp.Mix(), Top8{}
+
+		top.Top8Sort(txts, &vector)
+		for i := range top {
+			histogram[top[i].TXT.Symbol]++
+		}
+		sum := 0.0
+		for i := range histogram {
+			sum += float64(histogram[i])
+		}
+		e := 0.0
+		for _, v := range histogram {
+			if v == 0 {
+				continue
+			}
+			e += float64(v) * math.Log(float64(v)/sum) / sum
+		}
+		return -e
+		/*avg, count := 0.0, 0.0
+		for i := range histogram {
+			avg += float64(histogram[i]) / sum
+			count++
+		}
+		avg /= count
+		stddev := 0.0
+		for i := range histogram {
+			diff := (float64(histogram[i]) / sum) - avg
+			stddev += diff * diff
+		}
+		stddev = math.Sqrt(stddev / count)
+		return stddev*/
+	}
+	cp := m.Copy()
+	cp.Add(action)
+	histogram, vector, top := [256]int{}, cp.Mix(), Top8{}
+	top.Top8Sort(txts, &vector)
+	for i := range top {
+		histogram[top[i].TXT.Symbol]++
+	}
+	max := 0.0
+	for i, v := range histogram {
+		if v > 0 {
+			x := Min(txts, depth+1, byte(i), &cp)
+			if x > max {
+				max = x
+			}
+		}
+	}
+	return max
+}
+
+// Min is the minimax min function
+func Min(txts []TXT, depth int, action byte, m *Mixer) float64 {
+	if depth >= Depth {
+		cp := m.Copy()
+		cp.Add(action)
+		histogram, vector, top := [256]int{}, cp.Mix(), Top8{}
+		top.Top8Sort(txts, &vector)
+		for i := range top {
+			histogram[top[i].TXT.Symbol]++
+		}
+		sum := 0.0
+		for i := range histogram {
+			sum += float64(histogram[i])
+		}
+		e := 0.0
+		for _, v := range histogram {
+			if v == 0 {
+				continue
+			}
+			e += float64(v) * math.Log(float64(v)/sum) / sum
+		}
+		return -e
+		/*avg, count := 0.0, 0.0
+		for i := range histogram {
+			avg += float64(histogram[i]) / sum
+			count++
+		}
+		avg /= count
+		stddev := 0.0
+		for i := range histogram {
+			diff := (float64(histogram[i]) / sum) - avg
+			stddev += diff * diff
+		}
+		stddev = math.Sqrt(stddev / count)
+		return stddev*/
+	}
+	cp := m.Copy()
+	cp.Add(action)
+	histogram, vector, top := [256]int{}, cp.Mix(), Top8{}
+	top.Top8Sort(txts, &vector)
+	for i := range top {
+		histogram[top[i].TXT.Symbol]++
+	}
+	min := math.MaxFloat64
+	for i, v := range histogram {
+		if v > 0 {
+			x := Max(txts, depth+1, byte(i), &cp)
+			if x < min {
+				min = x
+			}
+		}
+	}
+	return min
+}
+
 func main() {
 	s, m := Load(), NewMixer()
 	set := s[0]
@@ -624,128 +738,18 @@ func main() {
 	//neural := Learn(txts)
 	m.Add(encoding[len(encoding)-1])
 	solution := make([]byte, 0, 8)
-	const Depth = 5
-	var max func(int, byte, *Mixer) float64
-	var min func(int, byte, *Mixer) float64
-	max = func(depth int, action byte, m *Mixer) float64 {
-		if depth >= Depth {
-			cp := m.Copy()
-			cp.Add(action)
-			histogram, vector, top := [256]int{}, cp.Mix(), Top8{}
-
-			top.Top8Sort(txts, &vector)
-			for i := range top {
-				histogram[top[i].TXT.Symbol]++
-			}
-			sum := 0.0
-			for i := range histogram {
-				sum += float64(histogram[i])
-			}
-			e := 0.0
-			for _, v := range histogram {
-				if v == 0 {
-					continue
-				}
-				e += float64(v) * math.Log(float64(v)/sum) / sum
-			}
-			return -e
-			/*avg, count := 0.0, 0.0
-			for i := range histogram {
-				avg += float64(histogram[i]) / sum
-				count++
-			}
-			avg /= count
-			stddev := 0.0
-			for i := range histogram {
-				diff := (float64(histogram[i]) / sum) - avg
-				stddev += diff * diff
-			}
-			stddev = math.Sqrt(stddev / count)
-			return stddev*/
-		}
-		cp := m.Copy()
-		cp.Add(action)
-		histogram, vector, top := [256]int{}, cp.Mix(), Top8{}
-		top.Top8Sort(txts, &vector)
-		for i := range top {
-			histogram[top[i].TXT.Symbol]++
-		}
-		max := 0.0
-		for i, v := range histogram {
-			if v > 0 {
-				x := min(depth+1, byte(i), &cp)
-				if x > max {
-					max = x
-				}
-			}
-		}
-		return max
-	}
-	min = func(depth int, action byte, m *Mixer) float64 {
-		if depth >= Depth {
-			cp := m.Copy()
-			cp.Add(action)
-			histogram, vector, top := [256]int{}, cp.Mix(), Top8{}
-			top.Top8Sort(txts, &vector)
-			for i := range top {
-				histogram[top[i].TXT.Symbol]++
-			}
-			sum := 0.0
-			for i := range histogram {
-				sum += float64(histogram[i])
-			}
-			e := 0.0
-			for _, v := range histogram {
-				if v == 0 {
-					continue
-				}
-				e += float64(v) * math.Log(float64(v)/sum) / sum
-			}
-			return -e
-			/*avg, count := 0.0, 0.0
-			for i := range histogram {
-				avg += float64(histogram[i]) / sum
-				count++
-			}
-			avg /= count
-			stddev := 0.0
-			for i := range histogram {
-				diff := (float64(histogram[i]) / sum) - avg
-				stddev += diff * diff
-			}
-			stddev = math.Sqrt(stddev / count)
-			return stddev*/
-		}
-		cp := m.Copy()
-		cp.Add(action)
-		histogram, vector, top := [256]int{}, cp.Mix(), Top8{}
-		top.Top8Sort(txts, &vector)
-		for i := range top {
-			histogram[top[i].TXT.Symbol]++
-		}
-		min := math.MaxFloat64
-		for i, v := range histogram {
-			if v > 0 {
-				x := max(depth+1, byte(i), &cp)
-				if x < min {
-					min = x
-				}
-			}
-		}
-		return min
-	}
 	for {
 		histogram, vector, top := [256]int{}, m.Mix(), Top8{}
 		top.Top8Sort(txts, &vector)
 		for i := range top {
 			histogram[top[i].TXT.Symbol]++
 		}
-		action, xx := byte(0), 0.0
+		action, max := byte(0), 0.0
 		for i, v := range histogram {
 			if v > 0 {
-				x := max(0, byte(i), &m)
-				if x > xx {
-					action, xx = byte(i), x
+				x := Max(txts, 0, byte(i), &m)
+				if x > max {
+					action, max = byte(i), x
 				}
 			}
 		}
